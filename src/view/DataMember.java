@@ -2,61 +2,62 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
-import java.sql.*;
-import java.sql.SQLException;
+package view;
+
+import model.Member;
+import repository.MemberRepository;
+import repository.DataAccessException;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
 /**
+ * Form manajemen data member (tambah, ubah, hapus, cari).
+ * Menggunakan {@link MemberRepository} untuk akses data.
  *
- * @author ACER
+ * @author POS-KasirJAVA Refactor
  */
-public class dataMember extends javax.swing.JFrame {
-     
-    koneksi con = new koneksi();
+public class DataMember extends javax.swing.JFrame {
+
+    /** Repository untuk operasi CRUD data member. */
+    private final MemberRepository memberRepo = new MemberRepository();
 
     /**
-     * Creates new form tambahBarang
+     * Creates new form DataMember.
      */
-    public dataMember() {
+    public DataMember() {
         initComponents();
-        setTitle("DATA BARANG");
+        setTitle("DATA MEMBER");
         setLocationRelativeTo(null);
         getData();
     }
-    
-    public void clear(){
+
+    /** Mengosongkan semua field input. */
+    public void clear() {
         poin.setText("");
         stokBarang.setText("");
         hargaBeli.setText("");
         codeBarang.setText("");
     }
-    
+
+    /**
+     * Memuat seluruh data member dari DB ke tabel.
+     * Kolom: ID | Nama | No. Telphone | POIN
+     * (stokBarang = id_member, codeBarang = username, hargaBeli = no_tlp, poin = poin)
+     */
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
-        
-        try{
-            String sql = "SELECT * FROM member";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    int code  = rs.getInt("id_member");
-                    String nama = rs.getString("username");
-                    String noTlp = rs.getString("no_tlp");
-                    String poinM = rs.getString("poin");
-                    
-                    Object[]rowData = {code,nama, noTlp, poinM};
-                    model.addRow(rowData);
-                }
+        try {
+            List<Member> daftar = memberRepo.cariSemua();
+            for (Member m : daftar) {
+                model.addRow(new Object[]{m.getId(), m.getUsername(), m.getNoTlp(), m.getPoin()});
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -334,103 +335,99 @@ public class dataMember extends javax.swing.JFrame {
     }//GEN-LAST:event_hargaBeliActionPerformed
 
     private void backActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_backActionPerformed
-        // TODO add your handling code here:
-        dashbordAdmin.main(null);
+        new DashboardAdmin().setVisible(true);
         dispose();
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO member (id_member, username, no_tlp, poin) VALUES  ('"
-            + stokBarang.getText() + "', '"+ codeBarang.getText() +"', '"+ hargaBeli.getText()+"', '"+ poin.getText() +"' );";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Member : BERHASIL DI TAMBAHKAN");
+        String id     = stokBarang.getText().trim();
+        String nama   = codeBarang.getText().trim();
+        String noTlp  = hargaBeli.getText().trim();
+        String poinTxt = poin.getText().trim();
+
+        if (id.isEmpty() || nama.isEmpty() || poinTxt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "ISI SEMUA KOLOM !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            int poinVal = Integer.parseInt(poinTxt);
+            Member m = new Member(id, nama, noTlp, poinVal);
+            if (memberRepo.tambah(m)) {
+                JOptionPane.showMessageDialog(this, "Data Member : BERHASIL DI TAMBAHKAN");
                 clear();
                 getData();
             }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "POIN harus berupa angka!", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_addActionPerformed
 
     private void tbl_dataMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tbl_dataMouseClicked
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow != -1){
-            String code = tbl_data.getValueAt(selectedRow, 1).toString();
-            String Hbeli = tbl_data.getValueAt(selectedRow, 2).toString();
-            String stok = tbl_data.getValueAt(selectedRow, 0).toString();
+        if (selectedRow != -1) {
+            String id    = tbl_data.getValueAt(selectedRow, 0).toString();
+            String nama  = tbl_data.getValueAt(selectedRow, 1).toString();
+            String noTlp = tbl_data.getValueAt(selectedRow, 2).toString();
             String poinM = tbl_data.getValueAt(selectedRow, 3).toString();
-            
 
-            codeBarang.setText(code);
-            hargaBeli.setText(Hbeli);
-            stokBarang.setText(stok);
+            stokBarang.setText(id);
+            codeBarang.setText(nama);
+            hargaBeli.setText(noTlp);
             poin.setText(poinM);
-            
         }
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "PILIH DATA YANG AKAN DI UPDATE !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-        String code = codeBarang.getText();
-        String Hbeli = hargaBeli.getText();
-        String stok = stokBarang.getText();
-        String poinM = poin.getText();
-        
-        if(code.isEmpty() || Hbeli.isEmpty() || stok.isEmpty()|| poinM.isEmpty() ){
-            JOptionPane.showMessageDialog(null,  "ISI SEMUA KOLOM !!");
+        String id     = stokBarang.getText().trim();
+        String nama   = codeBarang.getText().trim();
+        String noTlp  = hargaBeli.getText().trim();
+        String poinTxt = poin.getText().trim();
+
+        if (id.isEmpty() || nama.isEmpty() || poinTxt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "ISI SEMUA KOLOM !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-        
-        con.config();
-        try{
-            String sql = "UPDATE member SET id_member = '"+stok+ "', username ='"+code+
-            "', no_tlp ='"+Hbeli+"', poin ='"+poinM+"' WHERE id_member = "+ stok +";";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Member : BERHASIL DI UPDATE");
+        try {
+            int poinVal = Integer.parseInt(poinTxt);
+            Member m = new Member(id, nama, noTlp, poinVal);
+            if (memberRepo.ubah(m)) {
+                JOptionPane.showMessageDialog(this, "Data Member : BERHASIL DI UPDATE");
                 clear();
                 getData();
             }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "POIN harus berupa angka!", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "PILIH DATA YANG AKAN DI HAPUS !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-        int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
+        int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?",
                 "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION){
-            String stok = tbl_data.getValueAt(selectedRow, 0).toString();
-            
-            con.config();
-            try{
-                String sql = "DELETE FROM member WHERE id_member = "+stok+" ;";
-
-                int i = con.stm.executeUpdate(sql);
-                if(i > 0){
-                    JOptionPane.showMessageDialog(null,  "Data Member : TELAH DI HAPUS");
+        if (confirm == JOptionPane.YES_OPTION) {
+            String id = tbl_data.getValueAt(selectedRow, 0).toString();
+            try {
+                if (memberRepo.hapus(id)) {
+                    JOptionPane.showMessageDialog(this, "Data Member : TELAH DI HAPUS");
                     clear();
                     getData();
                 }
-            }catch(SQLException e){
-                JOptionPane.showMessageDialog(null, e.getMessage());
+            } catch (DataAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
-            
         }
     }//GEN-LAST:event_deleteActionPerformed
 
@@ -439,7 +436,6 @@ public class dataMember extends javax.swing.JFrame {
     }//GEN-LAST:event_poinActionPerformed
 
     private void cariKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_cariKeyReleased
-        // TODO add your handling code here:
         DefaultTableModel ob = (DefaultTableModel) tbl_data.getModel();
         TableRowSorter<DefaultTableModel> obj = new TableRowSorter<>(ob);
         tbl_data.setRowSorter(obj);
@@ -453,7 +449,7 @@ public class dataMember extends javax.swing.JFrame {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
@@ -463,23 +459,20 @@ public class dataMember extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(dataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(dataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(dataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(dataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataMember.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new dataMember().setVisible(true);
+                new DataMember().setVisible(true);
             }
         });
     }
@@ -507,5 +500,4 @@ public class dataMember extends javax.swing.JFrame {
     private javax.swing.JButton update;
     // End of variables declaration//GEN-END:variables
 
-    
 }

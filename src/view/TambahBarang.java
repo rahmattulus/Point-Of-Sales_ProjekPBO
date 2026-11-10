@@ -2,27 +2,30 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
-import java.math.BigInteger;
-import java.sql.*;
-import java.sql.SQLException;
+package view;
+
+import model.Barang;
+import repository.BarangRepository;
+
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
 /**
+ * Form CRUD Data Barang untuk Admin.
  *
  * @author ACER
  */
-public class tambahBarang extends javax.swing.JFrame {
+public class TambahBarang extends javax.swing.JFrame {
      
-    koneksi con = new koneksi();
+    private final BarangRepository barangRepo = new BarangRepository();
 
     /**
-     * Creates new form tambahBarang
+     * Creates new form TambahBarang
      */
-    public tambahBarang() {
+    public TambahBarang() {
         initComponents();
         setTitle("DATA BARANG");
         setLocationRelativeTo(null);
@@ -38,28 +41,17 @@ public class tambahBarang extends javax.swing.JFrame {
     }
     
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
         
-        try{
-            String sql = "SELECT * FROM databarang";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    BigInteger code  = new BigInteger(rs.getString("code_barang"));
-                    String nama = rs.getString("nama_barang");
-                    String Hbeli = rs.getString("harga_beli");
-                    String Hjual = rs.getString("harga_jual");
-                    int stokB = rs.getInt("stok_barang");
-                    
-                    Object[]rowData = {code,nama,stokB, Hbeli, Hjual};
-                    model.addRow(rowData);
-                }
+        try {
+            List<Barang> daftar = barangRepo.cariSemua();
+            for (Barang b : daftar) {
+                Object[] rowData = {b.getKode(), b.getNama(), b.getStok(), b.getHargaBeli(), b.getHargaJual()};
+                model.addRow(rowData);
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage());
         }
     }
 
@@ -356,32 +348,32 @@ public class tambahBarang extends javax.swing.JFrame {
     }//GEN-LAST:event_hargaJualActionPerformed
 
     private void backActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_backActionPerformed
-        // TODO add your handling code here:
-        dashbordAdmin.main(null);
+        new DashboardAdmin().setVisible(true);
         dispose();
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO databarang (code_barang, nama_barang, harga_beli, harga_jual, stok_barang) VALUES  ('"
-            + codeBarang.getText() + "', '"+ namaBarang.getText() +"', '"+ hargaBeli.getText() +"', '"+ hargaJual.getText() 
-            +"', '"+ stokBarang.getText() +"' );";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI TAMBAHKAN");
+        try {
+            String code = codeBarang.getText().trim();
+            String nama = namaBarang.getText().trim();
+            int hbeli = Integer.parseInt(hargaBeli.getText().trim());
+            int hjual = Integer.parseInt(hargaJual.getText().trim());
+            int stok = Integer.parseInt(stokBarang.getText().trim());
+
+            Barang b = new Barang(code, nama, hbeli, hjual, stok);
+            if (barangRepo.tambah(b)) {
+                JOptionPane.showMessageDialog(this, "Data Barang : BERHASIL DI TAMBAHKAN");
                 clear();
                 getData();
             }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Harga dan stok harus berupa angka!");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
         }
     }//GEN-LAST:event_addActionPerformed
 
     private void tbl_dataMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tbl_dataMouseClicked
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
         if(selectedRow != -1){
             String code = tbl_data.getValueAt(selectedRow, 0).toString();
@@ -395,67 +387,62 @@ public class tambahBarang extends javax.swing.JFrame {
             hargaBeli.setText(Hbeli); 
             hargaJual.setText(Hjual);
             stokBarang.setText(stok);
-            
         }
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
         if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+            JOptionPane.showMessageDialog(this, "PILIH DATA YANG AKAN DI UPDATE !!");
+            return;
         }
-        String code = codeBarang.getText();
-        String nama = namaBarang.getText();
-        String Hbeli = hargaBeli.getText();
-        String Hjual = hargaJual.getText();
-        String stok = stokBarang.getText();
+        String code = codeBarang.getText().trim();
+        String nama = namaBarang.getText().trim();
+        String Hbeli = hargaBeli.getText().trim();
+        String Hjual = hargaJual.getText().trim();
+        String stok = stokBarang.getText().trim();
         
         if(code.isEmpty() || nama.isEmpty() || Hbeli.isEmpty() || Hjual.isEmpty() || stok.isEmpty() ){
-            JOptionPane.showMessageDialog(null,  "ISI SEMUA KOLOM !!");
+            JOptionPane.showMessageDialog(this, "ISI SEMUA KOLOM !!");
+            return;
         }
         
-        con.config();
-        try{
-            String sql = "UPDATE databarang SET nama_barang = '"+nama+ "', harga_beli ='"+Hbeli+"', harga_jual ='"+Hjual+
-            "', stok_barang ='"+stok+"' WHERE code_barang = "+ code +";";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI UPDATE");
+        try {
+            int hbeli = Integer.parseInt(Hbeli);
+            int hjual = Integer.parseInt(Hjual);
+            int stokInt = Integer.parseInt(stok);
+            Barang b = new Barang(code, nama, hbeli, hjual, stokInt);
+            if (barangRepo.ubah(b)) {
+                JOptionPane.showMessageDialog(this, "Data Barang : BERHASIL DI UPDATE");
                 clear();
                 getData();
             }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Harga dan stok harus berupa angka!");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
         }
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
         if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+            JOptionPane.showMessageDialog(this, "PILIH DATA YANG AKAN DI HAPUS !!");
+            return;
         }
         int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
                 "Konfirmasi", JOptionPane.YES_NO_OPTION);
         if(confirm == JOptionPane.YES_OPTION){
             String code = tbl_data.getValueAt(selectedRow, 0).toString();
-            
-            con.config();
-            try{
-                String sql = "DELETE FROM databarang WHERE code_barang = "+code+" ;";
-
-                int i = con.stm.executeUpdate(sql);
-                if(i > 0){
-                    JOptionPane.showMessageDialog(null,  "Data Barang : TELAH DI HAPUS");
+            try {
+                if (barangRepo.hapus(code)) {
+                    JOptionPane.showMessageDialog(this, "Data Barang : TELAH DI HAPUS");
                     clear();
                     getData();
                 }
-            }catch(SQLException e){
-                JOptionPane.showMessageDialog(null, e.getMessage());
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Gagal menghapus: " + e.getMessage());
             }
-            
         }
     }//GEN-LAST:event_deleteActionPerformed
 
@@ -493,20 +480,20 @@ public class tambahBarang extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(tambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(TambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(tambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(TambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(tambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(TambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(tambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(TambahBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new tambahBarang().setVisible(true);
+                new TambahBarang().setVisible(true);
             }
         });
     }

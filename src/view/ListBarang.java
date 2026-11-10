@@ -2,55 +2,53 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
-import java.math.BigInteger;
-import java.sql.*;
-import java.sql.SQLException;
+package view;
+
+import model.Barang;
+import repository.BarangRepository;
+import repository.DataAccessException;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
 /**
+ * Form daftar barang (read-only) untuk Kasir.
+ * Menggunakan {@link BarangRepository} untuk memuat data.
  *
- * @author ACER
+ * @author POS-KasirJAVA Refactor
  */
-public class listBarang extends javax.swing.JFrame {
-     
-    koneksi con = new koneksi();
+public class ListBarang extends javax.swing.JFrame {
+
+    /** Repository untuk membaca data barang. */
+    private final BarangRepository barangRepo = new BarangRepository();
 
     /**
-     * Creates new form tambahBarang
+     * Creates new form ListBarang.
      */
-    public listBarang() {
+    public ListBarang() {
         initComponents();
         setTitle("LIST DATA BARANG");
         setLocationRelativeTo(null);
         getData();
     }
-    
+
+    /**
+     * Memuat seluruh data barang dari DB ke tabel.
+     * Kolom: Code | Nama | Harga Jual | Stock
+     */
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
-        
-        try{
-            String sql = "SELECT * FROM databarang";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    BigInteger code  = new BigInteger(rs.getString("code_barang"));
-                    String nama = rs.getString("nama_barang");
-                    String Hjual = rs.getString("harga_jual");
-                    int stokB = rs.getInt("stok_barang");
-                    
-                    Object[]rowData = {code,nama, Hjual, stokB};
-                    model.addRow(rowData);
-                }
+        try {
+            List<Barang> daftar = barangRepo.cariSemua();
+            for (Barang b : daftar) {
+                model.addRow(new Object[]{b.getKode(), b.getNama(), b.getHargaJual(), b.getStok()});
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -192,8 +190,7 @@ public class listBarang extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void backActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_backActionPerformed
-        // TODO add your handling code here:
-        dashbordKasir.main(null);
+        new DashboardKasir().setVisible(true);
         dispose();
     }//GEN-LAST:event_backActionPerformed
 
@@ -206,7 +203,6 @@ public class listBarang extends javax.swing.JFrame {
     }//GEN-LAST:event_tbl_dataKeyReleased
 
     private void cariKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_cariKeyReleased
-        // TODO add your handling code here:
         DefaultTableModel ob = (DefaultTableModel) tbl_data.getModel();
         TableRowSorter<DefaultTableModel> obj = new TableRowSorter<>(ob);
         tbl_data.setRowSorter(obj);
@@ -220,7 +216,7 @@ public class listBarang extends javax.swing.JFrame {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
@@ -230,35 +226,20 @@ public class listBarang extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(listBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ListBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(listBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ListBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(listBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ListBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(listBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(ListBarang.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new listBarang().setVisible(true);
+                new ListBarang().setVisible(true);
             }
         });
     }
@@ -275,5 +256,4 @@ public class listBarang extends javax.swing.JFrame {
     private javax.swing.JTable tbl_data;
     // End of variables declaration//GEN-END:variables
 
-    
 }

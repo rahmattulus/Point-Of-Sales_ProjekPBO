@@ -2,9 +2,11 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
+package view;
 
 /**
+ * Tampilan Menu Utama untuk memilih akses sebagai Admin atau Kasir.
+ * Berperan sebagai Main Class aplikasi.
  *
  * @author ACER
  */
@@ -132,13 +134,12 @@ public class MenuUtama extends javax.swing.JFrame {
     
     
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        // TODO add your handling code here:
-        loginKasir.main(null);
+        new LoginKasir().setVisible(true);
         dispose();
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        loginAdmin.main(null);
+        new LoginAdmin().setVisible(true);
         dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 
@@ -186,3 +187,4 @@ public class MenuUtama extends javax.swing.JFrame {
     private javax.swing.JPanel jPanel1;
     // End of variables declaration//GEN-END:variables
 }
+

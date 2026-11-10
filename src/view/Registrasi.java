@@ -2,24 +2,26 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
-import java.sql.*;
-import java.awt.*;
-import java.sql.SQLException;
+package view;
+
 import javax.swing.JOptionPane;
+import model.Admin;
+import model.Kasir;
+import service.AuthService;
 
 /**
+ * Form Registrasi Admin dan Kasir.
  *
  * @author ACER
  */
-public class registrasi extends javax.swing.JFrame {
+public class Registrasi extends javax.swing.JFrame {
 
-    koneksi con = new koneksi();
+    private final AuthService authService = new AuthService();
     
     /**
-     * Creates new form registrasi
+     * Creates new form Registrasi
      */
-    public registrasi() {
+    public Registrasi() {
         initComponents();
         setTitle("Registrasi | Admin or Kasir");
         setLocationRelativeTo(null);
@@ -227,20 +229,14 @@ public class registrasi extends javax.swing.JFrame {
     }//GEN-LAST:event_inputPassActionPerformed
 
     private void addKasirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addKasirActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO petugaskasir (id_petugas, username, password, email) VALUES ("
-            + inputid.getText() + ", '" + inputNama.getText() + "', '"  + inputPass.getText() + "', '"
-            + inputEmail.getText() + "');";
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null, "DATA berhasil ditambahkan");
-                dispose();
-                dashbordAdmin.main(null);
-            }
-        } catch(HeadlessException | SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        try {
+            Kasir kasir = new Kasir(0, inputNama.getText(), inputPass.getText(), inputEmail.getText());
+            authService.registrasi(kasir);
+            JOptionPane.showMessageDialog(this, "DATA Kasir berhasil ditambahkan");
+            new DashboardAdmin().setVisible(true);
+            dispose();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
         }
     }//GEN-LAST:event_addKasirActionPerformed
 
@@ -254,26 +250,19 @@ public class registrasi extends javax.swing.JFrame {
     }//GEN-LAST:event_inputEmailActionPerformed
 
     private void backActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_backActionPerformed
-        // TODO add your handling code here:
-        dashbordAdmin.main(null);
+        new DashboardAdmin().setVisible(true);
         dispose();
     }//GEN-LAST:event_backActionPerformed
 
     private void addAdminActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addAdminActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO admin (id, username, password, email) VALUES ("
-            + inputid.getText() + ", '" + inputNama.getText() + "', '" + inputPass.getText() + "', '"
-            + inputEmail.getText() +"');";
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null, "DATA berhasil ditambahkan");
-                dispose();
-                dashbordAdmin.main(null);
-            }
-        } catch(HeadlessException | SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        try {
+            Admin admin = new Admin(0, inputNama.getText(), inputPass.getText(), inputEmail.getText());
+            authService.registrasi(admin);
+            JOptionPane.showMessageDialog(this, "DATA Admin berhasil ditambahkan");
+            new DashboardAdmin().setVisible(true);
+            dispose();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
         }
     }//GEN-LAST:event_addAdminActionPerformed
 
@@ -294,20 +283,20 @@ public class registrasi extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Registrasi.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new registrasi().setVisible(true);
+                new Registrasi().setVisible(true);
             }
         });
     }

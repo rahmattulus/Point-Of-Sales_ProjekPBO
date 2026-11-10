@@ -2,70 +2,66 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
-import java.sql.*;
-import java.sql.SQLException;
-import java.util.HashMap;
+package view;
+
+import model.Supplier;
+import repository.SupplierRepository;
+import repository.DataAccessException;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
 /**
+ * Form manajemen data supplier (tambah, ubah, hapus, cari).
+ * Menggunakan {@link SupplierRepository} untuk akses data.
+ * Kolom tabel: id_supplier (hidden via baris model), Nama, Email, NPWP, No. Rek, Alamat.
  *
- * @author ACER
+ * @author POS-KasirJAVA Refactor
  */
-public class dataSupplier extends javax.swing.JFrame {
-     
-    koneksi con = new koneksi();
-    HashMap<String, Integer> supplier = new HashMap<String, Integer>();
-    Integer id;
+public class DataSupplier extends javax.swing.JFrame {
 
+    /** Repository untuk operasi CRUD data supplier. */
+    private final SupplierRepository supplierRepo = new SupplierRepository();
 
     /**
-     * Creates new form tambahBarang
+     * Creates new form DataSupplier.
      */
-    public dataSupplier() {
+    public DataSupplier() {
         initComponents();
-        setTitle("DATA SUPLAYER");
+        setTitle("DATA SUPPLIER");
         setLocationRelativeTo(null);
         getData();
-        System.out.println(supplier);
     }
-    
-    public void clear(){
+
+    /** Mengosongkan semua field input. */
+    public void clear() {
         alamat.setText("");
         noRek.setText("");
         nama.setText("");
         npwp.setText("");
         email.setText("");
     }
-    
+
+    /**
+     * Memuat seluruh data supplier dari DB ke tabel.
+     * Kolom: Nama | Email | NPWP | No. Rek | Alamat
+     * id_supplier disimpan tersembunyi di model kolom ke-5 (index 5).
+     */
     private void getData() {
-        con.config();
-        
         DefaultTableModel model = (DefaultTableModel) tbl_data.getModel();
         model.setRowCount(0);
-        
-        try{
-            String sql = "SELECT * FROM supplier";
-            try (ResultSet rs = con.stm.executeQuery(sql)) {
-                while(rs.next()){
-                    String namaSp = rs.getString("nama");
-                    String emailSp = rs.getString("email");
-                    String alamatSp = rs.getString("alamat");
-                    int npwpSp = rs.getInt("npwp");
-                    int noRekSp = rs.getInt("noRek");
-                    
-                    supplier.put(namaSp,rs.getInt("id"));
-                    Object[]rowData = {namaSp, emailSp, npwpSp, noRekSp, alamatSp};
-                    model.addRow(rowData);
-                    
-                }
+        try {
+            List<Supplier> daftar = supplierRepo.cariSemua();
+            for (Supplier s : daftar) {
+                model.addRow(new Object[]{
+                    s.getNama(), s.getEmail(), s.getNpwp(), s.getNoRek(), s.getAlamat(), s.getId()
+                });
             }
-            
-        }catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi Gagal: " + e.getMessage());
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -357,7 +353,6 @@ public class dataSupplier extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void noRekActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_noRekActionPerformed
-        // TODO add your handling code here:
         email.requestFocus();
     }//GEN-LAST:event_noRekActionPerformed
 
@@ -366,114 +361,99 @@ public class dataSupplier extends javax.swing.JFrame {
     }//GEN-LAST:event_alamatActionPerformed
 
     private void backActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_backActionPerformed
-        // TODO add your handling code here:
-        dashbordAdmin.main(null);
+        new DashboardAdmin().setVisible(true);
         dispose();
     }//GEN-LAST:event_backActionPerformed
 
     private void addActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        try{
-            String sql = "INSERT INTO supplier (nama, email, noRek, npwp, alamat) VALUES  ('"
-            + nama.getText() + "', '"+ email.getText() +"', '"+ noRek.getText() +"', '"+ npwp.getText() 
-            +"', '"+ alamat.getText() +"' );";
-            
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI TAMBAHKAN");
+        String namaTxt  = nama.getText().trim();
+        String emailTxt = email.getText().trim();
+        String noRekTxt = noRek.getText().trim();
+        String npwpTxt  = npwp.getText().trim();
+        String alamatTxt = alamat.getText().trim();
+
+        if (namaTxt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "ISI SEMUA KOLOM !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            Supplier sp = new Supplier(0, namaTxt, emailTxt, noRekTxt, npwpTxt, alamatTxt);
+            if (supplierRepo.tambah(sp)) {
+                JOptionPane.showMessageDialog(this, "Data Supplier : BERHASIL DI TAMBAHKAN");
                 clear();
                 getData();
             }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-        //UPDATE `supplier` SET `nama` = 'PT. WOYs', `email` = 'admin@woy.corps', `noRek` = '1100021432', `npwp` = '9988761', `alamat` = 'newYork usa' WHERE `supplier`.`id` = 1;
     }//GEN-LAST:event_addActionPerformed
 
     private void tbl_dataMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tbl_dataMouseClicked
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow != -1){
-            String namaSp = tbl_data.getValueAt(selectedRow, 0).toString();
-            String emailSp = tbl_data.getValueAt(selectedRow, 1).toString();
-            String npwpSp = tbl_data.getValueAt(selectedRow, 2).toString();
-            String noRekSp = tbl_data.getValueAt(selectedRow, 3).toString();
-            String alamatSp = tbl_data.getValueAt(selectedRow, 4).toString();
-            id = supplier.get(namaSp);
-
-            nama.setText(namaSp);
-            email.setText(emailSp);
-            npwp.setText(npwpSp);
-            noRek.setText(noRekSp);
-            alamat.setText(alamatSp);
-            
+        if (selectedRow != -1) {
+            // Kolom visible: 0=Nama,1=Email,2=NPWP,3=No.Rek,4=Alamat  hidden col 5=id
+            nama.setText(tbl_data.getValueAt(selectedRow, 0).toString());
+            email.setText(tbl_data.getValueAt(selectedRow, 1).toString());
+            npwp.setText(tbl_data.getValueAt(selectedRow, 2).toString());
+            noRek.setText(tbl_data.getValueAt(selectedRow, 3).toString());
+            alamat.setText(tbl_data.getValueAt(selectedRow, 4).toString());
         }
     }//GEN-LAST:event_tbl_dataMouseClicked
 
     private void updateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_updateActionPerformed
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "PILIH DATA YANG AKAN DI UPDATE !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-        String namaSp = nama.getText();
-        String alamatSp = alamat.getText();
-        String npwpSp = npwp.getText();
-        String emailSp = email.getText();
-        String noRekSp = noRek.getText();
-        
-        if(alamatSp.isEmpty()  || namaSp.isEmpty() || npwpSp.isEmpty() || emailSp.isEmpty() || noRekSp.isEmpty() ){
-            JOptionPane.showMessageDialog(null,  "ISI SEMUA KOLOM !!");
+        String namaTxt  = nama.getText().trim();
+        String emailTxt = email.getText().trim();
+        String noRekTxt = noRek.getText().trim();
+        String npwpTxt  = npwp.getText().trim();
+        String alamatTxt = alamat.getText().trim();
+
+        if (namaTxt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "ISI SEMUA KOLOM !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-        
-        con.config();
-        try{
-            String sql = "UPDATE supplier SET nama = '"+namaSp+ "', email ='"+emailSp+"', noRek ='"+noRekSp+
-            "', npwp ='"+npwpSp+"', alamat ='"+alamatSp+"' WHERE id = "+ id +";";
-//            System.out.println(sql);
-            int i = con.stm.executeUpdate(sql);
-            if(i > 0){
-                JOptionPane.showMessageDialog(null,  "Data Barang : BERHASIL DI UPDATE");
-                id = -1;
+        try {
+            // Ambil id_supplier dari kolom tersembunyi (index 5 di model)
+            int idSupplier = Integer.parseInt(tbl_data.getModel().getValueAt(selectedRow, 5).toString());
+            Supplier sp = new Supplier(idSupplier, namaTxt, emailTxt, noRekTxt, npwpTxt, alamatTxt);
+            if (supplierRepo.ubah(sp)) {
+                JOptionPane.showMessageDialog(this, "Data Supplier : BERHASIL DI UPDATE");
                 clear();
                 getData();
             }
-        }catch(SQLException e){
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        } catch (DataAccessException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_updateActionPerformed
 
     private void deleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteActionPerformed
-        // TODO add your handling code here:
         int selectedRow = tbl_data.getSelectedRow();
-        if(selectedRow == -1){
-            JOptionPane.showMessageDialog(null,  "PILIH DATA YANG AKAN DI UPDATE !!");
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "PILIH DATA YANG AKAN DI HAPUS !!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
         }
-        int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?", 
+        int confirm = JOptionPane.showConfirmDialog(this, "Yakin Ingin Menghapus Data Ini?",
                 "Konfirmasi", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION){
-            String namaSp = tbl_data.getValueAt(selectedRow, 0).toString();
-            
-            con.config();
-            try{
-                String sql = "DELETE FROM supplier WHERE nama = "+namaSp+" ;";
-
-                int i = con.stm.executeUpdate(sql);
-                if(i > 0){
-                    JOptionPane.showMessageDialog(null,  "Data Barang : TELAH DI HAPUS");
+        if (confirm == JOptionPane.YES_OPTION) {
+            // Ambil id_supplier dari kolom tersembunyi (index 5 di model)
+            String id = tbl_data.getModel().getValueAt(selectedRow, 5).toString();
+            try {
+                if (supplierRepo.hapus(id)) {
+                    JOptionPane.showMessageDialog(this, "Data Supplier : TELAH DI HAPUS");
                     clear();
                     getData();
                 }
-            }catch(SQLException e){
-                JOptionPane.showMessageDialog(null, e.getMessage());
+            } catch (DataAccessException e) {
+                JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
-            
         }
     }//GEN-LAST:event_deleteActionPerformed
 
     private void namaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_namaActionPerformed
-        // TODO add your handling code here:
         noRek.requestFocus();
     }//GEN-LAST:event_namaActionPerformed
 
@@ -482,7 +462,6 @@ public class dataSupplier extends javax.swing.JFrame {
     }//GEN-LAST:event_cariActionPerformed
 
     private void cariKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_cariKeyReleased
-        // TODO add your handling code here:
         DefaultTableModel ob = (DefaultTableModel) tbl_data.getModel();
         TableRowSorter<DefaultTableModel> obj = new TableRowSorter<>(ob);
         tbl_data.setRowSorter(obj);
@@ -490,12 +469,10 @@ public class dataSupplier extends javax.swing.JFrame {
     }//GEN-LAST:event_cariKeyReleased
 
     private void emailActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_emailActionPerformed
-        // TODO add your handling code here:
         npwp.requestFocus();
     }//GEN-LAST:event_emailActionPerformed
 
     private void npwpActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_npwpActionPerformed
-        // TODO add your handling code here:
         alamat.requestFocus();
     }//GEN-LAST:event_npwpActionPerformed
 
@@ -506,7 +483,7 @@ public class dataSupplier extends javax.swing.JFrame {
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
         /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
@@ -516,23 +493,20 @@ public class dataSupplier extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(dataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(dataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(dataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(dataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DataSupplier.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        //</editor-fold>
-        //</editor-fold>
-        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new dataSupplier().setVisible(true);
+                new DataSupplier().setVisible(true);
             }
         });
     }
@@ -560,5 +534,4 @@ public class dataSupplier extends javax.swing.JFrame {
     private javax.swing.JButton update;
     // End of variables declaration//GEN-END:variables
 
-    
 }

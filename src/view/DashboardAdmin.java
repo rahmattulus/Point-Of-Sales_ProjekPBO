@@ -2,26 +2,27 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
-import java.sql.*;
-import java.awt.*;
-import java.sql.SQLException;
-import javax.swing.JOptionPane;
+package view;
+
+import service.AuthService;
+import service.Sesi;
+
 /**
+ * Dashboard Menu Admin.
  *
  * @author ACER
  */
-public class dashbordAdmin extends javax.swing.JFrame {
+public class DashboardAdmin extends javax.swing.JFrame {
 
     /**
-     * Creates new form dashbordAdmin 
+     * Creates new form DashboardAdmin 
      */
-    public dashbordAdmin() {
+    public DashboardAdmin() {
         initComponents();
         setTitle("Menu Admin");
 //        setSize(577, 429);
         setLocationRelativeTo(null);
-        name.setText(koneksi.username);
+        name.setText(Sesi.isLogin() ? Sesi.getPenggunaAktif().getUsername() : "Admin");
     }
 
     /**
@@ -187,31 +188,29 @@ public class dashbordAdmin extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void riwayatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_riwayatActionPerformed
-        // TODO add your handling code here:
+        new DataSupplier().setVisible(true);
+        dispose();
     }//GEN-LAST:event_riwayatActionPerformed
 
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        // TODO add your handling code here:
+        new AuthService().logout();
+        new MenuUtama().setVisible(true);
         dispose();
-        MenuUtama.main(null);
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void regisActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_regisActionPerformed
-        // TODO add your handling code here:
+        new Registrasi().setVisible(true);
         dispose();
-        registrasi.main(null);
     }//GEN-LAST:event_regisActionPerformed
 
     private void barangActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_barangActionPerformed
-        // TODO add your handling code here:
+        new TambahBarang().setVisible(true);
         dispose();
-        tambahBarang.main(null);
     }//GEN-LAST:event_barangActionPerformed
 
     private void memberActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_memberActionPerformed
-        // TODO add your handling code here:
+        new DataMember().setVisible(true);
         dispose();
-        dataMember.main(null);
     }//GEN-LAST:event_memberActionPerformed
 
     /**
@@ -231,20 +230,20 @@ public class dashbordAdmin extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(dashbordAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(dashbordAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(dashbordAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(dashbordAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardAdmin.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new dashbordAdmin().setVisible(true);
+                new DashboardAdmin().setVisible(true);
             }
         });
     }

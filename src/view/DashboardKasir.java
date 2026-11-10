@@ -2,98 +2,142 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
-package main;
+package view;
 
-import java.sql.*;
-import java.awt.*;
+import model.ItemTransaksi;
+import model.Keranjang;
+import model.Transaksi;
+import repository.DataAccessException;
+import service.AuthService;
+import service.Sesi;
+import service.TransaksiService;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.Timer;
 import javax.swing.table.DefaultTableModel;
 
 /**
+ * Form transaksi kasir (penjualan barang, keranjang belanja, pembayaran).
+ * Menggunakan {@link Keranjang} dan {@link TransaksiService} untuk proses bisnis.
  *
- * @author ACER
+ * @author POS-KasirJAVA Refactor
  */
-public class dashbordKasir extends javax.swing.JFrame {
+public class DashboardKasir extends javax.swing.JFrame {
 
-    koneksi con = new koneksi();
+    /** Keranjang belanja transaksi aktif. */
+    private final Keranjang keranjang = new Keranjang();
+
+    /** Service untuk logika transaksi dan pembuatan no faktur. */
+    private final TransaksiService txService = new TransaksiService();
+
+    /** Service otentikasi untuk logout. */
+    private final AuthService authService = new AuthService();
 
     /**
-     * Creates new form dashbordAdmin
+     * Creates new form DashboardKasir.
      */
-    public dashbordKasir() {
+    public DashboardKasir() {
         initComponents();
         setTitle("Menu Kasir");
-//        setSize(577, 429);
         setLocationRelativeTo(null);
-        txtkasir.setText("Kasir : " + koneksi.username);
-        txtNoTransaksi.setText(noFaktur());
 
-        // Timer untuk memperbarui waktu setiap menit (60000 ms)
+        String usernameKasir = Sesi.isLogin() ? Sesi.getPenggunaAktif().getUsername() : "Kasir";
+        txtkasir.setText("Kasir : " + usernameKasir);
+        txtNoTransaksi.setText(txService.buatNomorFaktur());
+
+        // Timer untuk memperbarui jam/tanggal setiap detik
         Timer timer = new Timer(1000, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Menggunakan method jam() untuk mendapatkan tanggal dan waktu saat ini
                 txtJam.setText(jam());
             }
         });
-        timer.start();  // Memulai timer
+        timer.start();
         txtJam.setText(jam());
     }
 
-    public String noFaktur() {
-        String faktur = "TSK001";
-        con.config();
-
-        String sql = "SELECT no_transaksi FROM transaksi ORDER BY no_transaksi DESC LIMIT 1";
-        try {
-            ResultSet rs = con.stm.executeQuery(sql);
-            if (rs.next()) {
-                String noTransaksi = rs.getString("no_transaksi");
-
-                // Pisahkan prefix dan bagian angka dari nomor transaksi terakhir
-                String prefix = noTransaksi.substring(0, 3);
-                int numberPart = Integer.parseInt(noTransaksi.substring(3)) + 1;
-
-                // Buat nomor faktur baru dengan prefix dan angka yang di-increment
-                faktur = prefix + String.format("%03d", numberPart);
-            }
-
-        } catch (SQLException ex) {
-            Logger.getLogger(dashbordKasir.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        System.out.println(faktur);
-        return faktur;
-    }
-
+    /**
+     * Format string jam dan tanggal saat ini.
+     *
+     * @return string format HTML untuk JLabel txtJam
+     */
     public String jam() {
-        // Mengambil tanggal dan waktu saat ini
         LocalDateTime currentDateTime = LocalDateTime.now();
-        // Format tanggal dan waktu dalam pola "dd/MM/yyyy HH:mm"
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMMM yyyy");
-
-        // Mengembalikan waktu dan tanggal dengan pemisah baris \n
         return "<html>" + currentDateTime.format(timeFormatter) + "<br>" + currentDateTime.format(dateFormatter) + "</html>";
     }
 
+    /** Mengosongkan form input dan total. */
     public void clear() {
         txtKodeBarang.setText("");
-        totalAtas.setText("");
+        totalAtas.setText("Rp. 0");
         txtBayar.setText("");
         txtKembali.setText("");
+    }
+
+    /**
+     * Memperbarui tampilan JTable dan total harga dari objek {@link Keranjang}.
+     */
+    private void refreshTableKeranjang() {
+        DefaultTableModel model = (DefaultTableModel) tbls.getModel();
+        model.setRowCount(0);
+        for (ItemTransaksi item : keranjang.getItems()) {
+            model.addRow(new Object[]{
+                item.getBarang().getNama(),
+                item.getHargaSatuan(),
+                item.getQty(),
+                item.getSubtotal()
+            });
+        }
+        totalAtas.setText("Rp. " + keranjang.hitungTotal());
+    }
+
+    /**
+     * Memperbarui kuantitas item pada baris yang dipilih di tabel.
+     *
+     * @param updateRow indeks baris tabel yang diedit
+     */
+    private void updateRowQty(int updateRow) {
+        if (updateRow < 0 || updateRow >= keranjang.getItems().size()) {
+            return;
+        }
+        try {
+            int newQty = Integer.parseInt(tbls.getValueAt(updateRow, 2).toString().trim());
+            ItemTransaksi item = keranjang.getItems().get(updateRow);
+            String kode = item.getBarang().getKode();
+            keranjang.ubahQty(kode, newQty);
+            refreshTableKeranjang();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "QTY harus berupa angka!", "Error", JOptionPane.ERROR_MESSAGE);
+            refreshTableKeranjang();
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Peringatan", JOptionPane.WARNING_MESSAGE);
+            refreshTableKeranjang();
+        }
+    }
+
+    /**
+     * Menghitung nilai uang kembalian berdasarkan input bayar dan total belanja.
+     */
+    private void hitungKembalian() {
+        try {
+            int total = keranjang.hitungTotal();
+            String bayarString = txtBayar.getText().replace("Rp. ", "").replace(".", "").trim();
+            if (bayarString.isEmpty()) {
+                return;
+            }
+            int bayar = Integer.parseInt(bayarString);
+            int kembalian = bayar - total;
+            txtKembali.setText(String.valueOf(kembalian));
+        } catch (NumberFormatException e) {
+            txtKembali.setText("0");
+        }
     }
 
     /**
@@ -439,73 +483,19 @@ public class dashbordKasir extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void updateQty(){
-        con.config();
-        
-    }
-    
-//    Method untuk memasukan data kedalam tabel
-    private void addData(String productId) {
-        con.config();
-        DefaultTableModel tabel = (DefaultTableModel) tbls.getModel();
-//        tabel.setRowCount(0);
-
-        String sql = "SELECT * FROM databarang WHERE code_barang = " + productId + " LIMIT 1;";
-        try (ResultSet rs = con.stm.executeQuery(sql)) {
-            if (rs.next()) {
-                String nama = rs.getString("nama_barang");
-                int harga = rs.getInt("harga_jual");
-                int qty = 1;
-
-                int jumlah = harga * qty;
-//                System.out.println(nama);
-//                System.out.println(jumlah);
-
-                Integer currentQuantity = 0;
-                boolean productExists = false;
-                for (int i = 0; i < tabel.getRowCount(); i++) {
-                    // Corrected here
-                    System.out.println(tabel.getValueAt(i, 0));
-
-                    if (tabel.getValueAt(i, 0).equals(nama)) {
-
-                        currentQuantity = (int) tbls.getValueAt(i, 2);
-                        tabel.setValueAt(currentQuantity + 1, i, 2);  // Update quantity
-                        tabel.setValueAt((currentQuantity + 1) * harga, i, 3);  // Update total price
-                        productExists = true;
-//                        System.out.println(productExists);
-                        break;
-                    }
-                }
-                // If the product does not exist, add it as a new row
-                if (!productExists) {
-                    tabel.addRow(new Object[]{nama, harga, qty, jumlah});
-                }
-
-                System.out.println(productExists);
-                updateTotal();
-            } else {
-                JOptionPane.showMessageDialog(null, "Produk tidak ditemukan");
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(dashbordKasir.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
     private void jButton8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton8ActionPerformed
-        // TODO add your handling code here:
+        authService.logout();
+        new MenuUtama().setVisible(true);
         dispose();
-        MenuUtama.main(null);
     }//GEN-LAST:event_jButton8ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        // TODO add your handling code here:
+        new ListBarang().setVisible(true);
         dispose();
-        listBarang.main(null);
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void txtBayarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtBayarActionPerformed
-        // TODO add your handling code here:
+        hitungKembalian();
     }//GEN-LAST:event_txtBayarActionPerformed
 
     private void txtKembaliActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtKembaliActionPerformed
@@ -513,37 +503,32 @@ public class dashbordKasir extends javax.swing.JFrame {
     }//GEN-LAST:event_txtKembaliActionPerformed
 
     private void txtKodeBarangActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtKodeBarangActionPerformed
-        // TODO add your handling code here:
-        String productId = txtKodeBarang.getText();
-        addData(productId);
-        txtKodeBarang.setText(" ");
+        String productId = txtKodeBarang.getText().trim();
+        if (!productId.isEmpty()) {
+            boolean success = txService.tambahKeKeranjang(keranjang, productId);
+            if (success) {
+                refreshTableKeranjang();
+            } else {
+                JOptionPane.showMessageDialog(this, "Barang tidak ditemukan atau stok tidak mencukupi!",
+                        "Peringatan", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+        txtKodeBarang.setText("");
         txtKodeBarang.requestFocusInWindow();
-
     }//GEN-LAST:event_txtKodeBarangActionPerformed
 
     private void txtNoTransaksiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtNoTransaksiActionPerformed
         // TODO add your handling code here:
-
     }//GEN-LAST:event_txtNoTransaksiActionPerformed
 
     private void tblsKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tblsKeyReleased
         // TODO add your handling code here:
-
     }//GEN-LAST:event_tblsKeyReleased
 
     private void tblsKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_tblsKeyPressed
-        // TODO add your handling code here:
         int updateRow = tbls.getSelectedRow();
-
-        if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
-            int harga = Integer.parseInt(tbls.getValueAt(updateRow, 1).toString());
-            int qty = Integer.parseInt(tbls.getValueAt(updateRow, 2).toString());
-            tbls.setValueAt(qty, updateRow, 2);
-
-            int jumlah = harga * qty;
-
-            tbls.setValueAt(jumlah, updateRow, 3);
-            updateTotal();
+        if (updateRow != -1 && evt.getKeyCode() == KeyEvent.VK_ENTER) {
+            updateRowQty(updateRow);
         }
     }//GEN-LAST:event_tblsKeyPressed
 
@@ -552,80 +537,60 @@ public class dashbordKasir extends javax.swing.JFrame {
     }//GEN-LAST:event_tblsKeyTyped
 
     private void tblsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tblsMouseClicked
-        // TODO add your handling code here:
+        if (tbls.isEditing()) {
+            tbls.getCellEditor().stopCellEditing();
+        }
         int updateRow = tbls.getSelectedRow();
-
-        int harga = Integer.parseInt(tbls.getValueAt(updateRow, 1).toString());
-        int qty = Integer.parseInt(tbls.getValueAt(updateRow, 2).toString());
-        tbls.setValueAt(qty, updateRow, 2);
-
-//        if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
-        int jumlah = harga * qty;
-
-        tbls.setValueAt(jumlah, updateRow, 3);
-        updateTotal();
-//        }
+        if (updateRow != -1) {
+            updateRowQty(updateRow);
+        }
     }//GEN-LAST:event_tblsMouseClicked
 
     private void txtBayarKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtBayarKeyPressed
-        // TODO add your handling code here:
-        // Menghapus "Rp. " dan spasi dari string
-        String totalString = totalAtas.getText().replace("Rp. ", "").trim();
-        String bayarString = txtBayar.getText().replace("Rp. ", "").trim();
-
         if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
-            try {
-                // Konversi dari string ke int setelah membersihkan string dari prefix
-                int total = Integer.parseInt(totalString);
-                int bayar = Integer.parseInt(bayarString);
-
-                int kembalian = bayar - total;
-
-                // Konversi kembalian menjadi string dan set ke text field
-                String hasil = String.valueOf(kembalian);
-                txtKembali.setText(hasil);
-            } catch (NumberFormatException e) {
-                // Menangani kesalahan jika string tidak bisa dikonversi menjadi angka
-                System.out.println("Error: " + e.getMessage());
-            }
+            hitungKembalian();
         }
-
     }//GEN-LAST:event_txtBayarKeyPressed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-        con.config();
-        String totalString = totalAtas.getText().replace("Rp. ", "").trim();
-        String petugas = txtkasir.getText().replace("Kasir : ", "").trim();
-        String waktu = txtJam.getText().replace("<html>", "").replace("<br>", " | ").replace("</html>", "").trim();
-        long total = Integer.parseInt(totalString);
-        try {
-            String sql = "INSERT INTO transaksi (no_transaksi, petugas_kasir, total, waktu_transaksi) VALUES  ('"
-                    + txtNoTransaksi.getText() + "', '" + petugas + "', '" + total + "', '" + waktu
-                    + "' );";
+        if (keranjang.getItems().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Keranjang belanja masih kosong!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-            int i = con.stm.executeUpdate(sql);
-            if (i > 0) {
-                DefaultTableModel refresh = (DefaultTableModel) tbls.getModel();
-                JOptionPane.showMessageDialog(null, "<html> Transaksi Berhasil <br>"+ waktu +"<br> KEMBALIAN : Rp. "+txtKembali.getText()+"</html>");
-                clear();
-                refresh.setNumRows(0);
-            }
-            
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, e.getMessage());
+        String bayarString = txtBayar.getText().replace("Rp. ", "").replace(".", "").trim();
+        if (bayarString.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Masukkan nominal pembayaran!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            txtBayar.requestFocusInWindow();
+            return;
+        }
+
+        try {
+            int bayar = Integer.parseInt(bayarString);
+            Transaksi t = txService.bayar(keranjang, bayar);
+            int kembalian = t.hitungKembalian(bayar);
+            txtKembali.setText(String.valueOf(kembalian));
+
+            String waktu = txtJam.getText().replace("<html>", "").replace("<br>", " | ").replace("</html>", "").trim();
+            JOptionPane.showMessageDialog(this,
+                    "<html>Transaksi Berhasil<br>No. Faktur: " + t.getNoTransaksi()
+                    + "<br>" + waktu
+                    + "<br><b>KEMBALIAN : Rp. " + kembalian + "</b></html>",
+                    "Sukses", JOptionPane.INFORMATION_MESSAGE);
+
+            keranjang.kosongkan();
+            clear();
+            refreshTableKeranjang();
+            txtNoTransaksi.setText(txService.buatNomorFaktur());
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Nominal pembayaran harus berupa angka!", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Peringatan", JOptionPane.WARNING_MESSAGE);
+        } catch (IllegalStateException | DataAccessException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Error Transaksi", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_jButton1ActionPerformed
-
-    private void updateTotal() {
-        int rowCount = tbls.getRowCount();
-        Integer total = 0;
-        for (int i = 0; i < rowCount; i++) {
-            total += Integer.parseInt(tbls.getValueAt(i, 3).toString());
-        }
-        totalAtas.setText("Rp. " + total.toString());
-//        txtTotal.setText(total.toString());
-    }
 
     /**
      * @param args the command line arguments
@@ -644,21 +609,20 @@ public class dashbordKasir extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(dashbordKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(dashbordKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(dashbordKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(dashbordKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(DashboardKasir.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new dashbordKasir().setVisible(true);
+                new DashboardKasir().setVisible(true);
             }
         });
     }
