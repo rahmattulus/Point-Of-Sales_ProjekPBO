@@ -1,0 +1,25 @@
+# ============================================================
+# .gitignore — POS-KasirJAVA
+# ============================================================
+
+# --- NetBeans build output ---
+/build/
+/dist/
+/nbproject/private/
+
+# --- IntelliJ IDEA output ---
+/out/
+
+# --- IntelliJ IDEA project files (tidak perlu ditrack) ---
+/.idea/workspace.xml
+/.idea/tasks.xml
+/.idea/usage.statistics.xml
+/.idea/shelf/
+/.idea/httpRequests/
+
+# --- OS generated files ---
+Thumbs.db
+.DS_Store
+
+# --- Markdown documentation files ---
+*.md
